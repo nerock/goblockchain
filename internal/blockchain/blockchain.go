@@ -1,10 +1,12 @@
 package blockchain
 
 import (
+	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/nerock/goblockchain/internal/signature"
 	"github.com/nerock/goblockchain/internal/transaction"
 )
 
@@ -39,8 +41,14 @@ func (bc *Blockchain) CreateBlock(nonce int, previousHash [32]byte) *Block {
 	return b
 }
 
-func (bc *Blockchain) AddTransaction(sender, recipient string, value float32) {
+func (bc *Blockchain) AddTransaction(sender, recipient string, value float32, senderPublicKey *ecdsa.PublicKey, sig *signature.Signature) error {
+	t := transaction.New(sender, recipient, value)
+	if err := sig.Verify(t, senderPublicKey); sender != MINING_SENDER && err != nil {
+		return err
+	}
+
 	bc.transactionPool = append(bc.transactionPool, transaction.New(sender, recipient, value))
+	return nil
 }
 
 func (bc *Blockchain) CopyTransactionPool() []*transaction.Transaction {
@@ -92,7 +100,10 @@ func (bc *Blockchain) Mining() error {
 		return fmt.Errorf("retrieve last block hash: %w", err)
 	}
 
-	bc.AddTransaction(MINING_SENDER, bc.address, MINING_REWARD)
+	if err := bc.AddTransaction(MINING_SENDER, bc.address, MINING_REWARD, nil, nil); err != nil {
+		return fmt.Errorf("adding reward transaction: %w", err)
+	}
+
 	bc.CreateBlock(nonce, previousHash)
 	return nil
 }
