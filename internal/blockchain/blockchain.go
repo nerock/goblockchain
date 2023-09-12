@@ -17,9 +17,9 @@ const (
 )
 
 type Blockchain struct {
-	transactionPool []*transaction.Transaction
-	chain           []*Block
-	address         string
+	TransactionPool []*transaction.Transaction `json:"-"`
+	Chain           []*Block                   `json:"blocks"`
+	Address         string                     `json:"address"`
 }
 
 func New(address string) (*Blockchain, error) {
@@ -28,15 +28,15 @@ func New(address string) (*Blockchain, error) {
 		return nil, fmt.Errorf("could not get initial hash: %w", err)
 	}
 
-	bc := &Blockchain{address: address}
+	bc := &Blockchain{Address: address}
 	bc.CreateBlock(0, initialHash)
 
 	return bc, nil
 }
 
-func (bc *Blockchain) CreateBlock(nonce int, previousHash [32]byte) *Block {
-	b := NewBlock(nonce, previousHash, bc.transactionPool)
-	bc.chain = append(bc.chain, b)
+func (bc *Blockchain) CreateBlock(nonce int, previousHash Hash) *Block {
+	b := NewBlock(nonce, previousHash, bc.TransactionPool)
+	bc.Chain = append(bc.Chain, b)
 
 	return b
 }
@@ -47,20 +47,20 @@ func (bc *Blockchain) AddTransaction(sender, recipient string, value float32, se
 		return err
 	}
 
-	bc.transactionPool = append(bc.transactionPool, transaction.New(sender, recipient, value))
+	bc.TransactionPool = append(bc.TransactionPool, transaction.New(sender, recipient, value))
 	return nil
 }
 
 func (bc *Blockchain) CopyTransactionPool() []*transaction.Transaction {
 	transactions := make([]*transaction.Transaction, 0)
-	for _, t := range bc.transactionPool {
+	for _, t := range bc.TransactionPool {
 		transactions = append(transactions, transaction.New(t.SenderAddress, t.RecipientAddress, t.Value))
 	}
 
 	return transactions
 }
 
-func (bc *Blockchain) ValidProof(nonce int, previousHash [32]byte, transactions []*transaction.Transaction, difficulty int) error {
+func (bc *Blockchain) ValidProof(nonce int, previousHash Hash, transactions []*transaction.Transaction, difficulty int) error {
 	guessHash, err := NewBlock(nonce, previousHash, transactions).Hash()
 	if err != nil {
 		return err
@@ -100,7 +100,7 @@ func (bc *Blockchain) Mining() error {
 		return fmt.Errorf("retrieve last block hash: %w", err)
 	}
 
-	if err := bc.AddTransaction(MINING_SENDER, bc.address, MINING_REWARD, nil, nil); err != nil {
+	if err := bc.AddTransaction(MINING_SENDER, bc.Address, MINING_REWARD, nil, nil); err != nil {
 		return fmt.Errorf("adding reward transaction: %w", err)
 	}
 
@@ -110,7 +110,7 @@ func (bc *Blockchain) Mining() error {
 
 func (bc *Blockchain) CalculateTotalAmount(blockchainAddress string) float32 {
 	var total float32
-	for _, b := range bc.chain {
+	for _, b := range bc.Chain {
 		for _, t := range b.Transactions {
 			value := t.Value
 			if blockchainAddress == t.SenderAddress {
@@ -125,5 +125,5 @@ func (bc *Blockchain) CalculateTotalAmount(blockchainAddress string) float32 {
 }
 
 func (bc *Blockchain) LastBlock() *Block {
-	return bc.chain[len(bc.chain)-1]
+	return bc.Chain[len(bc.Chain)-1]
 }
