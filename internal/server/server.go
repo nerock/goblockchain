@@ -43,18 +43,15 @@ func (s *Server) Run() error {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 
-	r.Route("/blockchain", func(r chi.Router) {
-		r.Get("/", s.getBlockchain)
-	})
-
-	r.Route("/wallet", func(r chi.Router) {
-		r.Post("/", s.createWallet)
-	})
+	r.Get("/blockchain", s.getBlockchain)
+	r.Post("/wallet", s.createWallet)
 
 	r.Route("/transaction", func(r chi.Router) {
 		r.Get("/", s.retrieveTransactions)
 		r.Post("/", s.createTransaction)
 	})
+
+	r.Post("/mine", s.mine)
 
 	return http.ListenAndServe(fmt.Sprintf(":%d", s.port), r)
 }
@@ -174,6 +171,21 @@ func (s *Server) createTransaction(w http.ResponseWriter, r *http.Request) {
 		httpRes(w, fmt.Errorf("could not add transaction: %w", err), http.StatusInternalServerError)
 		return
 	}
+}
+
+func (s *Server) mine(w http.ResponseWriter, r *http.Request) {
+	bc, err := s.getOrCreateBlockchain()
+	if err != nil {
+		httpRes(w, fmt.Errorf("could not retrieve blockchain: %w", err), http.StatusInternalServerError)
+		return
+	}
+
+	if err := bc.Mining(); err != nil {
+		httpRes(w, fmt.Errorf("could not mine: %w", err), http.StatusInternalServerError)
+		return
+	}
+
+	httpRes(w, nil, http.StatusOK)
 }
 
 func strToECDSAPrivateKey(s string, publicKey ecdsa.PublicKey) (*ecdsa.PrivateKey, error) {
