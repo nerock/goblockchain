@@ -18,7 +18,7 @@ func New() (*Wallet, error) {
 		return nil, fmt.Errorf("could not generate ecdsa key: %w", err)
 	}
 
-	return &Wallet{key: key, address: generateAddress(&key.PublicKey)}, nil
+	return &Wallet{key: key, address: GenerateAddress(&key.PublicKey)}, nil
 }
 
 func (w *Wallet) PrivateKey() *ecdsa.PrivateKey {

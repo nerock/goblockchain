@@ -7,12 +7,12 @@ import (
 	"golang.org/x/crypto/ripemd160"
 )
 
-// generateAddress generates a blockchain wallet address based on an ecdsa public key
-func generateAddress(pKey *ecdsa.PublicKey) string {
+// GenerateAddress generates a blockchain wallet address based on an ecdsa public key
+func GenerateAddress(publicKey *ecdsa.PublicKey) string {
 	// SHA-256 hashing on the wallet public key
 	h2 := sha256.New()
-	h2.Write(pKey.X.Bytes())
-	h2.Write(pKey.Y.Bytes())
+	h2.Write(publicKey.X.Bytes())
+	h2.Write(publicKey.Y.Bytes())
 	digest2 := h2.Sum(nil)
 
 	// RIPEMD-160 on the SHA-256 hash
