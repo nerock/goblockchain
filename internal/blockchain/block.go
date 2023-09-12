@@ -8,17 +8,18 @@ import (
 )
 
 type Block struct {
-	Nonce        int      `json:"nonce"`
-	PreviousHash [32]byte `json:"previous_hash"`
-	Timestamp    int64    `json:"timestamp"`
-	Transactions []string `json:"transactions"`
+	Nonce        int            `json:"nonce"`
+	PreviousHash [32]byte       `json:"previous_hash"`
+	Timestamp    int64          `json:"timestamp"`
+	Transactions []*Transaction `json:"transactions"`
 }
 
-func NewBlock(nonce int, previousHash [32]byte) *Block {
+func NewBlock(nonce int, previousHash [32]byte, transactions []*Transaction) *Block {
 	return &Block{
 		Nonce:        nonce,
 		PreviousHash: previousHash,
 		Timestamp:    time.Now().UnixNano(),
+		Transactions: transactions,
 	}
 }
 
