@@ -39,7 +39,7 @@ func (s *Signature) Verify(v any, k *ecdsa.PublicKey) error {
 
 	h := sha256.Sum256(m)
 	if !ecdsa.Verify(k, h[:], s.R, s.S) {
-		return fmt.Errorf("could not verify signature with transaction and public key: %w", err)
+		return fmt.Errorf("could not verify signature with data and public key")
 	}
 
 	return nil
