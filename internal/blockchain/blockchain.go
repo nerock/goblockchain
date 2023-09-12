@@ -29,22 +29,25 @@ func New(address string) (*Blockchain, error) {
 	}
 
 	bc := &Blockchain{Address: address}
-	bc.CreateBlock(0, initialHash)
+	bc.AddBlock(0, initialHash)
 
 	return bc, nil
 }
 
-func (bc *Blockchain) CreateBlock(nonce int, previousHash Hash) *Block {
+func (bc *Blockchain) AddBlock(nonce int, previousHash Hash) *Block {
 	b := NewBlock(nonce, previousHash, bc.TransactionPool)
 	bc.Chain = append(bc.Chain, b)
+	bc.TransactionPool = nil
 
 	return b
 }
 
 func (bc *Blockchain) AddTransaction(sender, recipient string, value float32, senderPublicKey *ecdsa.PublicKey, sig *signature.Signature) error {
 	t := transaction.New(sender, recipient, value)
-	if err := sig.Verify(t, senderPublicKey); sender != MINING_SENDER && err != nil {
-		return err
+	if sender != MINING_SENDER {
+		if err := sig.Verify(t, senderPublicKey); err != nil {
+			return err
+		}
 	}
 
 	bc.TransactionPool = append(bc.TransactionPool, transaction.New(sender, recipient, value))
@@ -75,14 +78,17 @@ func (bc *Blockchain) ValidProof(nonce int, previousHash Hash, transactions []*t
 }
 
 func (bc *Blockchain) ProofOfWork() (int, error) {
-	transactions := bc.CopyTransactionPool()
+	if len(bc.TransactionPool) == 0 {
+		return 0, errors.New("no transactions to mine")
+	}
+
 	previousHash, err := bc.LastBlock().Hash()
 	if err != nil {
 		return 0, err
 	}
 
 	var nonce int
-	for bc.ValidProof(nonce, previousHash, transactions, MINING_DIFFICULTY) != nil {
+	for bc.ValidProof(nonce, previousHash, bc.CopyTransactionPool(), MINING_DIFFICULTY) != nil {
 		nonce++
 	}
 
@@ -104,7 +110,7 @@ func (bc *Blockchain) Mining() error {
 		return fmt.Errorf("adding reward transaction: %w", err)
 	}
 
-	bc.CreateBlock(nonce, previousHash)
+	bc.AddBlock(nonce, previousHash)
 	return nil
 }
 
