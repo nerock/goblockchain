@@ -3,8 +3,11 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
+
+	"github.com/go-chi/chi/v5/middleware"
+
+	"github.com/go-chi/chi/v5"
 
 	"github.com/nerock/goblockchain/internal/blockchain"
 	"github.com/nerock/goblockchain/internal/wallet"
@@ -29,61 +32,35 @@ func New(port int, cache BlockchainCache) *Server {
 }
 
 func (s *Server) Run() error {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/blockchain", s.Blockchain)
+	r := chi.NewRouter()
+	r.Use(middleware.Logger)
 
-	return http.ListenAndServe(fmt.Sprintf(":%d", s.port), mux)
+	r.Route("/blockchain", func(r chi.Router) {
+		r.Get("/", s.getBlockchain)
+	})
+
+	return http.ListenAndServe(fmt.Sprintf(":%d", s.port), r)
 }
 
-func (s *Server) getBlockchain() (any, int) {
-	bc, err := func(c BlockchainCache) (*blockchain.Blockchain, error) {
-		bc := c.Get("blockchain")
-		if bc == nil {
-			minersWallet, err := wallet.New()
-			if err != nil {
-				return nil, fmt.Errorf("could not create new wallet: %w", err)
-			}
-
-			bc, err = blockchain.New(minersWallet.Address())
-			if err != nil {
-				return nil, fmt.Errorf("could not create new blockchain: %w", err)
-			}
-
-			c.Put("blockchain", bc)
+func (s *Server) getBlockchain(w http.ResponseWriter, r *http.Request) {
+	bc := s.cache.Get("blockchain")
+	if bc == nil {
+		minersWallet, err := wallet.New()
+		if err != nil {
+			http.Error(w, fmt.Sprintf("could not create new wallet: %s", err), http.StatusInternalServerError)
+			return
 		}
 
-		return bc, nil
-	}(s.cache)
+		bc, err = blockchain.New(minersWallet.Address())
+		if err != nil {
+			http.Error(w, fmt.Sprintf("could not create new blockchain: %s", err), http.StatusInternalServerError)
+			return
+		}
 
-	if err != nil {
-		return HTTPError{err.Error()}, http.StatusInternalServerError
+		s.cache.Put("blockchain", bc)
 	}
 
-	return bc, http.StatusOK
-}
-
-func (s *Server) Blockchain(w http.ResponseWriter, r *http.Request) {
-	var statusCode int
-	var res any
-	switch r.Method {
-	case http.MethodGet:
-		res, statusCode = s.getBlockchain()
-	default:
-		statusCode = http.StatusMethodNotAllowed
+	if err := json.NewEncoder(w).Encode(bc); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-
-	if err := write(w, res, statusCode); err != nil {
-		log.Println(err)
-	}
-}
-
-func write(w http.ResponseWriter, res any, statusCode int) error {
-	w.Header().Add("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
-
-	if res != nil {
-		return json.NewEncoder(w).Encode(res)
-	}
-
-	return nil
 }
