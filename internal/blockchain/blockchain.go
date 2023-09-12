@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/nerock/goblockchain/internal/transaction"
 )
 
 const (
@@ -13,7 +15,7 @@ const (
 )
 
 type Blockchain struct {
-	transactionPool []*Transaction
+	transactionPool []*transaction.Transaction
 	chain           []*Block
 	address         string
 }
@@ -38,19 +40,19 @@ func (bc *Blockchain) CreateBlock(nonce int, previousHash [32]byte) *Block {
 }
 
 func (bc *Blockchain) AddTransaction(sender, recipient string, value float32) {
-	bc.transactionPool = append(bc.transactionPool, NewTransaction(sender, recipient, value))
+	bc.transactionPool = append(bc.transactionPool, transaction.New(sender, recipient, value))
 }
 
-func (bc *Blockchain) CopyTransactionPool() []*Transaction {
-	transactions := make([]*Transaction, 0)
+func (bc *Blockchain) CopyTransactionPool() []*transaction.Transaction {
+	transactions := make([]*transaction.Transaction, 0)
 	for _, t := range bc.transactionPool {
-		transactions = append(transactions, NewTransaction(t.SenderAddress, t.RecipientAddress, t.Value))
+		transactions = append(transactions, transaction.New(t.SenderAddress, t.RecipientAddress, t.Value))
 	}
 
 	return transactions
 }
 
-func (bc *Blockchain) ValidProof(nonce int, previousHash [32]byte, transactions []*Transaction, difficulty int) error {
+func (bc *Blockchain) ValidProof(nonce int, previousHash [32]byte, transactions []*transaction.Transaction, difficulty int) error {
 	guessHash, err := NewBlock(nonce, previousHash, transactions).Hash()
 	if err != nil {
 		return err

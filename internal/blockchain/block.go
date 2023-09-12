@@ -5,16 +5,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/nerock/goblockchain/internal/transaction"
 )
 
 type Block struct {
-	Nonce        int            `json:"nonce"`
-	PreviousHash [32]byte       `json:"previous_hash"`
-	Timestamp    int64          `json:"timestamp"`
-	Transactions []*Transaction `json:"transactions"`
+	Nonce        int                        `json:"nonce"`
+	PreviousHash [32]byte                   `json:"previous_hash"`
+	Timestamp    int64                      `json:"timestamp"`
+	Transactions []*transaction.Transaction `json:"transactions"`
 }
 
-func NewBlock(nonce int, previousHash [32]byte, transactions []*Transaction) *Block {
+func NewBlock(nonce int, previousHash [32]byte, transactions []*transaction.Transaction) *Block {
 	return &Block{
 		Nonce:        nonce,
 		PreviousHash: previousHash,
